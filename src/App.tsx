@@ -12,6 +12,7 @@ import TransactionHistory from "./pages/TransactionHistory";
 import BlockchainLedger from "./pages/BlockchainLedger";
 import AIReports from "./pages/AIReports";
 import NotFound from "./pages/NotFound";
+import CreateDivision from "./pages/CreateDivision";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/transaction-history" element={<TransactionHistory />} />
           <Route path="/blockchain-ledger" element={<BlockchainLedger />} />
           <Route path="/ai-reports" element={<AIReports />} />
+          <Route path="/create-division" element={<CreateDivision />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

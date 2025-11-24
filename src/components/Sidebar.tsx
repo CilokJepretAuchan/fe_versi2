@@ -8,6 +8,7 @@ import {
   FileBarChart,
   LogOut,
   Shield,
+  Building2
 } from "lucide-react";
 
 const menuItems = [
@@ -16,6 +17,7 @@ const menuItems = [
   { icon: History, label: "Riwayat Transaksi", path: "/transaction-history" },
   { icon: Blocks, label: "Blockchain Ledger", path: "/blockchain-ledger" },
   { icon: FileBarChart, label: "Laporan AI", path: "/ai-reports" },
+  { icon: Building2, label: "Create Division", path: "/create-division" },
 ];
 
 const Sidebar = () => {
