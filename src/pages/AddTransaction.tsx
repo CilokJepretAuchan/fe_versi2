@@ -1,4 +1,5 @@
-import { useState } from "react";
+"use client";
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,8 +14,12 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Hash } from "lucide-react";
+import { useRouter } from "next/router";   // <-- FIX
 
 const AddTransaction = () => {
+  const router = useRouter();                      // <-- FIX
+  const { division, project } = router.query;      // <-- FIX
+
   const [type, setType] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -23,7 +28,6 @@ const AddTransaction = () => {
   const [hash, setHash] = useState("");
 
   const generateHash = () => {
-    // Simple dummy hash generation
     const timestamp = Date.now();
     const randomStr = Math.random().toString(36).substring(7);
     return `${timestamp}${randomStr}`;
@@ -41,8 +45,7 @@ const AddTransaction = () => {
     setHash(generatedHash);
 
     toast.success("Transaksi berhasil disimpan!");
-    
-    // Reset form
+
     setTimeout(() => {
       setType("");
       setTitle("");
@@ -59,13 +62,25 @@ const AddTransaction = () => {
 
       <main className="flex-1 p-8">
         <div className="max-w-3xl mx-auto">
+
+          {/* Judul */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground">Input Transaksi</h1>
-            <p className="text-muted-foreground">Tambahkan transaksi baru ke sistem</p>
+            <p className="text-muted-foreground">
+              Tambahkan transaksi baru ke sistem
+            </p>
           </div>
 
+          {/* Divisi & Project */}
+          <div className="mb-6 p-4 bg-muted rounded-xl">
+            <p className="font-medium">Divisi: {division || "-"}</p>
+            <p className="font-medium">Project: {project || "-"}</p>
+          </div>
+
+          {/* Card Form */}
           <div className="bg-gradient-card rounded-2xl shadow-card p-8 border border-border">
             <form onSubmit={handleSubmit} className="space-y-6">
+
               <div className="space-y-2">
                 <Label htmlFor="type">Tipe Transaksi *</Label>
                 <Select value={type} onValueChange={setType}>
@@ -133,11 +148,7 @@ const AddTransaction = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="file">Upload Bukti</Label>
-                <Input
-                  id="file"
-                  type="file"
-                  className="rounded-xl"
-                />
+                <Input id="file" type="file" className="rounded-xl" />
               </div>
 
               <Button type="submit" className="w-full rounded-xl shadow-glow" size="lg">
@@ -156,6 +167,7 @@ const AddTransaction = () => {
                 </div>
               </div>
             )}
+
           </div>
         </div>
       </main>

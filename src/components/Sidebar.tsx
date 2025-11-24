@@ -8,6 +8,7 @@ import {
   FileBarChart,
   LogOut,
   Shield,
+  Building2
 } from "lucide-react";
 
 const menuItems = [

@@ -12,7 +12,6 @@ import TransactionHistory from "./pages/TransactionHistory";
 import BlockchainLedger from "./pages/BlockchainLedger";
 import AIReports from "./pages/AIReports";
 import NotFound from "./pages/NotFound";
-import CreateDivision from "./pages/CreateDivision";
 
 const queryClient = new QueryClient();
 
