@@ -8,11 +8,13 @@ const Navbar = () => {
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="p-2 bg-gradient-primary rounded-xl shadow-glow">
-              <Shield className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <span className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              Audit-Chan
+            <img 
+              src="/logo-auchan.png" 
+              alt="AuChan Logo" 
+              className="w-8 h-8 object-contain"
+            />
+            <span className="text-2xl font-bold text-black text-transparent">
+              AuChan
             </span>
           </Link>
 

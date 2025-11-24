@@ -38,8 +38,8 @@ const Landing = () => {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
               <h1 className="text-5xl lg:text-6xl font-bold text-foreground leading-tight">
-                Audit-Chan – Smart{" "}
-                <span className="bg-gradient-primary bg-clip-text text-transparent">
+                AuChan – Smart{" "}
+                <span className="text-[#0EA5E9] text-transparent">
                   Financial Transparency
                 </span>
               </h1>
