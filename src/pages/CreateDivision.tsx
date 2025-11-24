@@ -1,80 +1,88 @@
-"use client";
 import { useState } from "react";
-import Sidebar from "@/components/Sidebar";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Building2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { useRouter } from "next/router"; // <-- Fixed
 
 const CreateDivision = () => {
-  const [divisions, setDivisions] = useState<string[]>([]);
-  const [newDivision, setNewDivision] = useState("");
-  const router = useRouter(); // <-- Fixed
+  const navigate = useNavigate();
+  const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const [description, setDescription] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleAddDivision = () => {
-    if (!newDivision.trim()) {
-      toast.error("Nama divisi tidak boleh kosong!");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !code) {
+      toast.error("Nama dan kode wajib diisi");
       return;
     }
 
-    setDivisions([...divisions, newDivision]);
-    setNewDivision("");
-    toast.success("Divisi berhasil ditambahkan!");
+    setLoading(true);
+
+    try {
+      // Attempt to read token from cookie first, fallback to localStorage
+      const tokenFromCookie = document.cookie
+        .split("; ")
+        .find((c) => c.startsWith("token="))
+        ? document.cookie
+            .split("; ")
+            .map((s) => s.trim())
+            .find((c) => c.startsWith("token="))
+            ?.split("=")[1]
+        : null;
+
+      const token = tokenFromCookie ? decodeURIComponent(tokenFromCookie) : (JSON.parse(localStorage.getItem("user") || "null")?.token ?? "");
+
+      const res = await fetch("https://backend-auchan-production.up.railway.app/api/divisions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ name, code, description }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err?.message || "Gagal membuat divisi");
+        setLoading(false);
+        return;
+      }
+
+      toast.success("Divisi berhasil dibuat");
+      setLoading(false);
+      navigate("/dashboard");
+    } catch (e) {
+      setLoading(false);
+      toast.error("Server error");
+    }
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-
-      <main className="flex-1 p-8">
-        <div className="max-w-5xl mx-auto">
-          <h1 className="text-3xl font-bold mb-4">Create Division</h1>
-          <p className="text-muted-foreground mb-8">
-            Tambahkan divisi dan atur proyeknya.
-          </p>
-
-          {/* Input Add Division */}
-          <div className="flex gap-3 mb-8">
-            <Input
-              placeholder="Nama divisi baru"
-              value={newDivision}
-              onChange={(e) => setNewDivision(e.target.value)}
-              className="rounded-xl"
-            />
-            <Button className="rounded-xl" onClick={handleAddDivision}>
-              <PlusCircle className="w-4 h-4 mr-2" />
-              Tambah
-            </Button>
-          </div>
-
-          {/* List Division Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {divisions.map((name, index) => (
-              <Card
-                key={index}
-                className="cursor-pointer hover:shadow-xl transition rounded-2xl"
-                onClick={() =>
-                  router.push(`/create-project?division=${encodeURIComponent(name)}`)
-                }
-              >
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Building2 className="w-5 h-5 text-primary" />
-                    {name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-sm">
-                    Klik untuk membuat project pada divisi ini
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+    <div className="p-6">
+      <h2 className="text-2xl font-bold mb-4">Create Divisi</h2>
+      <form onSubmit={handleSubmit} className="space-y-4 max-w-lg">
+        <div>
+          <Label>Nama Divisi</Label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Keuangan" />
         </div>
-      </main>
+
+        <div>
+          <Label>Kode</Label>
+          <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="e.g. FIN-001" />
+        </div>
+
+        <div>
+          <Label>Deskripsi</Label>
+          <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Deskripsi singkat" />
+        </div>
+
+        <Button type="submit" disabled={loading}>
+          {loading ? "Menyimpan..." : "Buat Divisi"}
+        </Button>
+      </form>
     </div>
   );
 };
