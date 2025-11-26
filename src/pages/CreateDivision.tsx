@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import Sidebar from "@/components/Sidebar";
 
 const CreateDivision = () => {
   const navigate = useNavigate();
@@ -61,30 +62,50 @@ const CreateDivision = () => {
   };
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">Create Divisi</h2>
-      <form onSubmit={handleSubmit} className="space-y-4 max-w-lg">
-        <div>
-          <Label>Nama Divisi</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Keuangan" />
-        </div>
+    <div className="flex min-h-screen">
+      {/* Sidebar kiri */}
+      <Sidebar />
 
-        <div>
-          <Label>Kode</Label>
-          <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="e.g. FIN-001" />
-        </div>
+      {/* Konten utama */}
+      <div className="flex-1 p-6">
+        <h2 className="text-2xl font-bold mb-4">Create Divisi</h2>
 
-        <div>
-          <Label>Deskripsi</Label>
-          <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Deskripsi singkat" />
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-4 max-w-lg">
+          <div>
+            <Label>Nama Divisi</Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Keuangan"
+            />
+          </div>
 
-        <Button type="submit" disabled={loading}>
-          {loading ? "Menyimpan..." : "Buat Divisi"}
-        </Button>
-      </form>
+          <div>
+            <Label>Kode</Label>
+            <Input
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="e.g. FIN-001"
+            />
+          </div>
+
+          <div>
+            <Label>Deskripsi</Label>
+            <Input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Deskripsi singkat"
+            />
+          </div>
+
+          <Button type="submit" disabled={loading}>
+            {loading ? "Menyimpan..." : "Buat Divisi"}
+          </Button>
+        </form>
+      </div>
     </div>
   );
+
 };
 
 export default CreateDivision;
