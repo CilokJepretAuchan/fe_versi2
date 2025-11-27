@@ -4,9 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-// Asumsi: Anda mengimpor gambar seperti ini dari folder assets
 import heroDashboard from "@/assets/hero-dashboard.png";
-import { Shield } from "lucide-react";
 
 
 const Register = () => {
