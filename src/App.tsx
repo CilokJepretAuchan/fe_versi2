@@ -13,6 +13,9 @@ import BlockchainLedger from "./pages/BlockchainLedger";
 import AIReports from "./pages/AIReports";
 import NotFound from "./pages/NotFound";
 import CreateDivision from "./pages/CreateDivision";
+import CreateProject from "./pages/CreateProject";
+import TaskList from "./pages/ListTransactions";
+import CreateTransaction from "./pages/CreateTransaction";
 
 const queryClient = new QueryClient();
 
@@ -31,7 +34,13 @@ const App = () => (
           <Route path="/transaction-history" element={<TransactionHistory />} />
           <Route path="/blockchain-ledger" element={<BlockchainLedger />} />
           <Route path="/ai-reports" element={<AIReports />} />
-          <Route path="/create-divisi" element={<CreateDivision />} />
+          <Route path="/divisi" element={<CreateDivision />} />
+          <Route path="/divisions/:divisionId/projects" element={<CreateProject />} />
+          <Route
+            path="/divisions/:divisionId/projects/:projectId/tasks"
+            element={<TaskList />}
+          />
+          <Route path="/divisions/:divisionId/projects/:projectId/transactions/create" element={<CreateTransaction />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

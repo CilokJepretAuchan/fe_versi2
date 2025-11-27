@@ -26,7 +26,7 @@ const menuItems = [
   // laporan AI hanya ADMIN & AUDITOR
   { icon: FileBarChart, label: "Laporan AI", path: "/ai-reports", roles: ["ADMIN", "AUDITOR"] },
   // Create Divisi — hanya ADMIN yang bisa membuat divisi
-  { icon: PlusCircle, label: "Create Divisi", path: "/create-divisi", roles: ["ADMIN"] },
+  { icon: PlusCircle, label: "Create Divisi", path: "/divisi", roles: ["ADMIN"] },
 ];
 
 const Sidebar = () => {

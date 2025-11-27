@@ -53,6 +53,26 @@ const Login = () => {
         localStorage.setItem("role", role);
       }
 
+      // tentukan role
+      const orgId =
+        payload?.user?.members?.[0]?.orgId ??
+        payload?.user?.orgId ??
+        "";
+
+      if (orgId) {
+        localStorage.setItem("orgId", orgId);
+      }
+
+      // tentukan role
+      const userId =
+        payload?.user?.members?.[0]?.userId ??
+        payload?.user?.userId ??
+        "";
+
+      if (userId) {
+        localStorage.setItem("userId", userId);
+      }
+
       toast.success("Login berhasil!");
       navigate("/dashboard");
     } catch (error) {
