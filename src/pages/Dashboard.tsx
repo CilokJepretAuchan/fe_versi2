@@ -35,7 +35,7 @@ const Dashboard = () => {
       <main className="flex-1 p-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">Selamat datang, {userName}!</p>
+          <p className="text-muted-foreground">Welcome, {userName}!</p>
         </div>
 
         {/* Stats Grid */}
@@ -74,17 +74,17 @@ const Dashboard = () => {
         {/* Recent Transactions */}
         <div className="bg-gradient-card rounded-2xl shadow-card p-6 border border-border">
           <h3 className="text-xl font-bold text-foreground mb-6">
-            Transaksi Terbaru
+            Recent Transactions
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left py-3 px-4 text-muted-foreground font-medium">ID</th>
-                  <th className="text-left py-3 px-4 text-muted-foreground font-medium">Judul</th>
-                  <th className="text-left py-3 px-4 text-muted-foreground font-medium">Tipe</th>
-                  <th className="text-left py-3 px-4 text-muted-foreground font-medium">Jumlah</th>
-                  <th className="text-left py-3 px-4 text-muted-foreground font-medium">Tanggal</th>
+                  <th className="text-left py-3 px-4 text-muted-foreground font-medium">Title</th>
+                  <th className="text-left py-3 px-4 text-muted-foreground font-medium">Type</th>
+                  <th className="text-left py-3 px-4 text-muted-foreground font-medium">Amount</th>
+                  <th className="text-left py-3 px-4 text-muted-foreground font-medium">Date</th>
                 </tr>
               </thead>
               <tbody>
