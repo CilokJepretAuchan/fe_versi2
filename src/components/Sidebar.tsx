@@ -36,16 +36,18 @@ const Sidebar = () => {
   return (
     <aside className="w-64 min-h-screen bg-card border-r border-border flex flex-col">
       <div className="p-6 border-b border-border">
-        <Link to="/dashboard" className="flex items-center gap-2">
-          <div className="p-2 bg-gradient-primary rounded-xl shadow-glow">
-            <Shield className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Audit-Chan
-          </span>
-        </Link>
-      </div>
+  <Link to="/dashboard" className="flex items-center gap-3">
 
+      <img
+        src="/logo-auchan.png"
+        alt="AuChan Logo"
+        className="w-8 h-8 object-contain"
+      />
+    <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+      AuChan
+    </span>
+  </Link>
+</div>
       <nav className="flex-1 p-4 space-y-2">
         {menuItems
           .filter((item) => item.roles.includes(role)) // ⬅ filter by role
