@@ -27,7 +27,6 @@ import {
   Cell
 } from 'recharts';
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 
 // --- Types ---
 interface StatisticsData {
@@ -56,7 +55,7 @@ const Dashboard = () => {
   const [statsLoading, setStatsLoading] = useState(true);
 
   // State Grafik & Transaksi Terbaru
-  const [limit, setLimit] = useState("10"); // Default 10 data terakhir
+  const [limit, setLimit] = useState("10"); 
   const [transactions, setTransactions] = useState<TransactionData[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [chartData, setChartData] = useState<any[]>([]);
@@ -94,13 +93,12 @@ const Dashboard = () => {
     fetchStats();
   }, [token]);
 
-  // 2. Fetch Data Transaksi (Untuk Grafik & List)
+  // 2. Fetch Data Transaksi
   useEffect(() => {
     const fetchData = async () => {
       if (!token) return;
       setDataLoading(true);
       try {
-        // Fetch transaksi dengan Limit yang dipilih
         const params = new URLSearchParams({ page: "1", limit: limit });
         const url = `https://backend-auchan-production.up.railway.app/api/transactions?${params.toString()}`;
         
@@ -110,18 +108,14 @@ const Dashboard = () => {
         const json = await res.json();
         
         const rawList = json?.data?.data || [];
-        
-        // Simpan data mentah untuk List di kanan
         setTransactions(rawList);
 
-        // Transform data untuk Grafik (Reverse biar urut dari kiri ke kanan secara kronologis)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const reversedData = [...rawList].reverse().map((t: any) => ({
             name: new Date(t.transactionDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }),
             amount: t.amount,
-            type: t.type, // INCOME / EXPENSE
+            type: t.type,
             desc: t.description,
-            // Field khusus untuk warna bar chart
             value: t.amount, 
         }));
         
@@ -136,17 +130,16 @@ const Dashboard = () => {
     };
 
     fetchData();
-  }, [token, limit]); // Re-fetch jika limit berubah
+  }, [token, limit]);
 
   const netBalance = stats.totalAmountIncome - stats.totalAmountExpense;
 
-  // Custom Tooltip untuk Grafik
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-background border border-border p-3 rounded-lg shadow-xl">
+        <div className="bg-background border border-border p-3 rounded-lg shadow-xl z-50">
           <p className="font-bold text-foreground mb-1">{label}</p>
           <p className="text-xs text-muted-foreground mb-2">{data.desc}</p>
           <p className={`font-bold ${data.type === 'INCOME' ? 'text-green-500' : 'text-red-500'}`}>
@@ -159,181 +152,198 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
+    // CONTAINER UTAMA: h-screen & overflow-hidden (Kunci agar tidak scroll window)
+    <div className="flex h-screen w-full bg-background overflow-hidden">
       <Sidebar />
 
-      <main className="flex-1 p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">
+      {/* MAIN CONTENT: flex-col & h-full agar mengisi sisa tinggi */}
+      <main className="flex-1 flex flex-col h-full p-4 md:p-6 overflow-hidden">
+        
+        {/* HEADER: flex-none (Tinggi tetap sesuai konten) */}
+        <div className="mb-6 flex-none">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground text-sm">
             Ringkasan performa keuangan Anda.
           </p>
         </div>
 
-        {/* --- STATS GRID (Sama seperti sebelumnya) --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Card Income */}
-          <div className="bg-gradient-card rounded-2xl p-6 border border-border shadow-card relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <TrendingUp className="w-24 h-24 text-green-500" />
-            </div>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3 bg-green-500/10 rounded-xl text-green-500">
-                <TrendingUp className="w-6 h-6" />
-              </div>
-              <span className="text-sm font-medium text-muted-foreground">Pemasukan</span>
-            </div>
-            {statsLoading ? <Loader2 className="animate-spin" /> : 
-                <h3 className="text-2xl font-bold">{formatRupiah(stats.totalAmountIncome)}</h3>}
-          </div>
+        {/* CONTENT WRAPPER: flex-1 min-h-0 (Mengisi sisa ruang vertikal) */}
+        <div className="flex-1 flex flex-col min-h-0 gap-6">
+            
+            {/* 1. STATS GRID: flex-none (Tinggi tetap) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 flex-none">
+                {/* Card Income */}
+                <div className="bg-gradient-card rounded-2xl p-5 border border-border shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5">
+                        <TrendingUp className="w-20 h-20 text-green-500" />
+                    </div>
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 bg-green-500/10 rounded-lg text-green-500">
+                            <TrendingUp className="w-5 h-5" />
+                        </div>
+                        <span className="text-sm font-medium text-muted-foreground">Pemasukan</span>
+                    </div>
+                    {statsLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 
+                        <h3 className="text-xl md:text-2xl font-bold truncate" title={formatRupiah(stats.totalAmountIncome)}>
+                            {formatRupiah(stats.totalAmountIncome)}
+                        </h3>}
+                </div>
 
-           {/* Card Expense */}
-           <div className="bg-gradient-card rounded-2xl p-6 border border-border shadow-card relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <TrendingDown className="w-24 h-24 text-red-500" />
-            </div>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3 bg-red-500/10 rounded-xl text-red-500">
-                <TrendingDown className="w-6 h-6" />
-              </div>
-              <span className="text-sm font-medium text-muted-foreground">Pengeluaran</span>
-            </div>
-            {statsLoading ? <Loader2 className="animate-spin" /> : 
-                <h3 className="text-2xl font-bold">{formatRupiah(stats.totalAmountExpense)}</h3>}
-          </div>
+                {/* Card Expense */}
+                <div className="bg-gradient-card rounded-2xl p-5 border border-border shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5">
+                        <TrendingDown className="w-20 h-20 text-red-500" />
+                    </div>
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 bg-red-500/10 rounded-lg text-red-500">
+                            <TrendingDown className="w-5 h-5" />
+                        </div>
+                        <span className="text-sm font-medium text-muted-foreground">Pengeluaran</span>
+                    </div>
+                    {statsLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 
+                        <h3 className="text-xl md:text-2xl font-bold truncate" title={formatRupiah(stats.totalAmountExpense)}>
+                            {formatRupiah(stats.totalAmountExpense)}
+                        </h3>}
+                </div>
 
-          {/* Card Saldo */}
-          <div className="bg-gradient-card rounded-2xl p-6 border border-border shadow-card relative overflow-hidden group">
-             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <Wallet className="w-24 h-24 text-blue-500" />
-            </div>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3 bg-blue-500/10 rounded-xl text-blue-500">
-                <Wallet className="w-6 h-6" />
-              </div>
-              <span className="text-sm font-medium text-muted-foreground">Saldo</span>
-            </div>
-            {statsLoading ? <Loader2 className="animate-spin" /> : 
-                <h3 className={`text-2xl font-bold ${netBalance < 0 ? 'text-red-500' : 'text-blue-500'}`}>{formatRupiah(netBalance)}</h3>}
-          </div>
+                {/* Card Saldo */}
+                <div className="bg-gradient-card rounded-2xl p-5 border border-border shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5">
+                        <Wallet className="w-20 h-20 text-blue-500" />
+                    </div>
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500">
+                            <Wallet className="w-5 h-5" />
+                        </div>
+                        <span className="text-sm font-medium text-muted-foreground">Saldo</span>
+                    </div>
+                    {statsLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 
+                        <h3 className={`text-xl md:text-2xl font-bold truncate ${netBalance < 0 ? 'text-red-500' : 'text-blue-500'}`} title={formatRupiah(netBalance)}>
+                            {formatRupiah(netBalance)}
+                        </h3>}
+                </div>
 
-          {/* Card Activity */}
-          <div className="bg-gradient-card rounded-2xl p-6 border border-border shadow-card relative overflow-hidden group">
-             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <Activity className="w-24 h-24 text-purple-500" />
+                {/* Card Activity */}
+                <div className="bg-gradient-card rounded-2xl p-5 border border-border shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5">
+                        <Activity className="w-20 h-20 text-purple-500" />
+                    </div>
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 bg-purple-500/10 rounded-lg text-purple-500">
+                            <Activity className="w-5 h-5" />
+                        </div>
+                        <span className="text-sm font-medium text-muted-foreground">Aktivitas</span>
+                    </div>
+                    {statsLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 
+                        <div>
+                            <h3 className="text-xl md:text-2xl font-bold">{stats.totalTransaction} <span className="text-sm font-normal text-muted-foreground">Trx</span></h3>
+                            {stats.totalAnomaly > 0 && (
+                                <div className="mt-1 inline-flex items-center gap-1 text-[10px] text-orange-500 font-medium bg-orange-500/10 px-2 py-0.5 rounded-full">
+                                    <AlertTriangle className="w-3 h-3" /> {stats.totalAnomaly} Alert
+                                </div>
+                            )}
+                        </div>
+                    }
+                </div>
             </div>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3 bg-purple-500/10 rounded-xl text-purple-500">
-                <Activity className="w-6 h-6" />
-              </div>
-              <span className="text-sm font-medium text-muted-foreground">Aktivitas</span>
-            </div>
-            {statsLoading ? <Loader2 className="animate-spin" /> : 
-              <div>
-                <h3 className="text-2xl font-bold">{stats.totalTransaction} <span className="text-sm font-normal">Trx</span></h3>
-                {stats.totalAnomaly > 0 && (
-                  <div className="mt-2 flex items-center gap-1 text-xs text-orange-500 font-medium bg-orange-500/10 px-2 py-1 rounded-full w-fit">
-                    <AlertTriangle className="w-3 h-3" /> {stats.totalAnomaly} Anomali
-                  </div>
-                )}
-              </div>
-            }
-          </div>
-        </div>
 
-        {/* --- GRAPH & LIST SECTION --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-           
-           {/* 1. Grafik Transaksi */}
-           <div className="lg:col-span-2 bg-gradient-card rounded-2xl p-6 border border-border shadow-card h-[400px] flex flex-col">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-muted-foreground" />
-                    <h3 className="font-bold text-foreground">Grafik Arus Kas</h3>
+            {/* 2. GRAPH & LIST SECTION: flex-1 min-h-0 (Sisa ruang, dengan scroll internal jika perlu) */}
+            <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* Grafik Transaksi */}
+                <div className="lg:col-span-2 bg-gradient-card rounded-2xl p-5 border border-border shadow-sm flex flex-col h-full overflow-hidden">
+                    <div className="flex items-center justify-between mb-4 flex-none">
+                        <div className="flex items-center gap-2">
+                            <BarChart3 className="w-5 h-5 text-muted-foreground" />
+                            <h3 className="font-bold text-foreground text-sm md:text-base">Arus Kas</h3>
+                        </div>
+                        <Select value={limit} onValueChange={setLimit}>
+                            <SelectTrigger className="w-[120px] h-8 text-xs bg-background/50">
+                                <SelectValue placeholder="Limit" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="10">10 Terakhir</SelectItem>
+                                <SelectItem value="20">20 Terakhir</SelectItem>
+                                <SelectItem value="50">50 Terakhir</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="flex-1 w-full min-h-0">
+                        {dataLoading ? (
+                            <div className="h-full flex items-center justify-center">
+                                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                            </div>
+                        ) : chartData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={chartData} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                                    <XAxis 
+                                        dataKey="name" 
+                                        fontSize={10} 
+                                        tickLine={false} 
+                                        axisLine={false}
+                                        stroke="#666"
+                                        dy={10}
+                                    />
+                                    <YAxis 
+                                        fontSize={10} 
+                                        tickLine={false} 
+                                        axisLine={false}
+                                        stroke="#666"
+                                        tickFormatter={(value) => `${(value/1000).toFixed(0)}k`}
+                                    />
+                                    <Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(255,255,255,0.05)'}} />
+                                    <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={50}>
+                                        {chartData.map((entry, index) => (
+                                            <Cell 
+                                                key={`cell-${index}`} 
+                                                fill={entry.type === 'INCOME' ? '#22c55e' : '#ef4444'} 
+                                                fillOpacity={0.9}
+                                            />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                                Belum ada data transaksi
+                            </div>
+                        )}
+                    </div>
                 </div>
                 
-                {/* SELECTOR LIMIT */}
-                <Select value={limit} onValueChange={setLimit}>
-                    <SelectTrigger className="w-[140px] h-8 text-xs">
-                        <SelectValue placeholder="Limit" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="5">Terakhir 5</SelectItem>
-                        <SelectItem value="10">Terakhir 10</SelectItem>
-                        <SelectItem value="20">Terakhir 20</SelectItem>
-                        <SelectItem value="50">Terakhir 50</SelectItem>
-                    </SelectContent>
-                </Select>
-              </div>
+                {/* List Transaksi Terbaru */}
+                <div className="bg-gradient-card rounded-2xl p-5 border border-border shadow-sm flex flex-col h-full overflow-hidden">
+                    <h3 className="font-bold text-foreground mb-4 flex-none text-sm md:text-base">Terbaru</h3>
+                    
+                    <div className="flex-1 overflow-y-auto pr-2 space-y-3 scrollbar-thin scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/40 scrollbar-track-transparent">
+                        {dataLoading ? (
+                            <div className="flex justify-center py-10"><Loader2 className="animate-spin w-6 h-6 text-muted-foreground" /></div>
+                        ) : transactions.length > 0 ? (
+                            transactions.map((trx) => (
+                                <div key={trx.id} className="flex items-center justify-between p-3 bg-muted/20 border border-transparent hover:border-border rounded-xl hover:bg-muted/40 transition-all group">
+                                    <div className="min-w-0 pr-3">
+                                        <p className="font-medium text-sm truncate group-hover:text-primary transition-colors">{trx.description}</p>
+                                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                                            {new Date(trx.transactionDate).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'})}
+                                        </p>
+                                    </div>
+                                    <div className={`text-xs md:text-sm font-bold whitespace-nowrap ${trx.type === 'INCOME' ? 'text-green-500' : 'text-red-500'}`}>
+                                        {trx.type === 'INCOME' ? '+' : '-'} {formatRupiah(trx.amount)}
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm opacity-60">
+                                <Activity className="w-8 h-8 mb-2" />
+                                <p>Data kosong</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
 
-              <div className="flex-1 w-full min-h-0">
-                {dataLoading ? (
-                    <div className="h-full flex items-center justify-center">
-                        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-                    </div>
-                ) : chartData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
-                            <XAxis 
-                                dataKey="name" 
-                                fontSize={12} 
-                                tickLine={false} 
-                                axisLine={false}
-                                stroke="#888888"
-                            />
-                            <YAxis 
-                                fontSize={12} 
-                                tickLine={false} 
-                                axisLine={false}
-                                stroke="#888888"
-                                tickFormatter={(value) => `Rp${(value/1000).toFixed(0)}k`}
-                            />
-                            <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}} />
-                            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                                {chartData.map((entry, index) => (
-                                    <Cell 
-                                        key={`cell-${index}`} 
-                                        fill={entry.type === 'INCOME' ? '#22c55e' : '#ef4444'} 
-                                    />
-                                ))}
-                            </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
-                ) : (
-                    <div className="h-full flex items-center justify-center text-muted-foreground">
-                        Belum ada data transaksi
-                    </div>
-                )}
-              </div>
-           </div>
-           
-           {/* 2. List Transaksi Terbaru */}
-           <div className="bg-gradient-card rounded-2xl p-6 border border-border shadow-card h-[400px] flex flex-col">
-              <h3 className="font-bold text-foreground mb-4">Transaksi Terbaru</h3>
-              
-              <div className="flex-1 overflow-y-auto pr-2 space-y-4 scrollbar-thin scrollbar-thumb-border">
-                  {dataLoading ? (
-                     <div className="flex justify-center py-10"><Loader2 className="animate-spin" /></div>
-                  ) : transactions.length > 0 ? (
-                      transactions.map((trx) => (
-                        <div key={trx.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors">
-                            <div className="min-w-0">
-                                <p className="font-medium text-sm truncate">{trx.description}</p>
-                                <p className="text-xs text-muted-foreground">
-                                    {new Date(trx.transactionDate).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'})}
-                                </p>
-                            </div>
-                            <div className={`text-sm font-bold whitespace-nowrap ${trx.type === 'INCOME' ? 'text-green-500' : 'text-red-500'}`}>
-                                {trx.type === 'INCOME' ? '+' : '-'} {formatRupiah(trx.amount)}
-                            </div>
-                        </div>
-                      ))
-                  ) : (
-                      <p className="text-center text-sm text-muted-foreground py-10">Data kosong</p>
-                  )}
-              </div>
-           </div>
+            </div>
         </div>
 
       </main>
