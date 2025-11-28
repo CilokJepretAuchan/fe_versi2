@@ -2,56 +2,55 @@
 
 Audit Chain AI adalah aplikasi web modern untuk manajemen audit organisasi yang terintegrasi dengan kecerdasan buatan dan teknologi blockchain. Aplikasi ini dirancang untuk membantu organisasi dalam mengelola transaksi, anggota, divisi, dan proyek dengan fitur pelaporan AI yang canggih.
 
-## 🚀 Fitur Utama
+## Fitur Utama
 
-### 📊 Dashboard
+### Dashboard
 - Ringkasan statistik organisasi
 - Grafik dan visualisasi data real-time
 - Monitoring performa audit
 
-### 👥 Manajemen Anggota
+### Manajemen Anggota
 - Tambah, edit, dan hapus anggota organisasi
 - Sistem role-based (Admin, Treasurer, Auditor, Member)
 - Manajemen izin akses
 
-### 💰 Transaksi
+### Transaksi
 - Pencatatan transaksi masuk dan keluar
 - Riwayat transaksi lengkap
 - Detail transaksi dengan informasi lengkap
 
-### 🤖 Laporan AI
+### Laporan AI
 - Generasi laporan otomatis menggunakan AI
 - Analisis data transaksi
 - Rekomendasi berdasarkan pola audit
 
-### ⛓️ Blockchain Ledger
+### Blockchain Ledger
 - Integrasi dengan teknologi blockchain
 - Catatan transaksi yang tidak dapat diubah
 - Verifikasi keamanan data
 
-### 🏢 Divisi & Proyek
+### Divisi & Proyek
 - Pengelolaan divisi organisasi
 - Manajemen proyek audit
 - Tracking progress dan status
 
-## 🛠️ Teknologi
+## Teknologi
 
 - **Frontend**: React 18 + TypeScript
 - **Build Tool**: Vite
-- **UI Framework**: ShadCN UI + Radix UI
 - **Styling**: Tailwind CSS
 - **Routing**: React Router DOM
 - **State Management**: React Query
 - **Charts**: Recharts
 - **Form Handling**: React Hook Form + Zod
 
-## 📋 Prasyarat
+## Prasyarat
 
 - Node.js (versi 18 atau lebih baru)
 - npm atau bun package manager
 - Backend API server (lihat dokumentasi backend)
 
-## 🚀 Instalasi & Setup
+## Instalasi & Setup
 
 1. **Clone repository**
    ```bash
@@ -84,7 +83,7 @@ Audit Chain AI adalah aplikasi web modern untuk manajemen audit organisasi yang 
 5. **Buka browser**
    - Aplikasi akan berjalan di `http://localhost:5173`
 
-## 📜 Scripts Yang Tersedia
+## Scripts Yang Tersedia
 
 - `npm run dev` - Jalankan development server
 - `npm run build` - Build untuk production
@@ -92,7 +91,7 @@ Audit Chain AI adalah aplikasi web modern untuk manajemen audit organisasi yang 
 - `npm run preview` - Preview production build
 - `npm run lint` - Jalankan ESLint
 
-## 🏗️ Struktur Proyek
+## Struktur Proyek
 
 ```
 src/
@@ -109,7 +108,7 @@ src/
 └── assets/             # Gambar dan file statis
 ```
 
-## 🔧 Konfigurasi
+## Konfigurasi
 
 ### Environment Variables
 - `VITE_API_BASE_URL`: URL base untuk API backend
@@ -118,24 +117,12 @@ src/
 ### API Integration
 Aplikasi ini terintegrasi dengan backend API. Pastikan backend server berjalan dan dapat diakses.
 
-## 🤝 Kontribusi
-
-1. Fork repository
-2. Buat branch fitur baru (`git checkout -b feature/AmazingFeature`)
-3. Commit perubahan (`git commit -m 'Add some AmazingFeature'`)
-4. Push ke branch (`git push origin feature/AmazingFeature`)
-5. Buat Pull Request
-
-## 📝 Lisensi
-
-Distributed under the MIT License. See `LICENSE` for more information.
-
-## 📞 Kontak
+## Kontak
 
 - Project Link: [GitHub Repository]
 - Email: your-email@example.com
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [ShadCN UI](https://ui.shadcn.com/) - UI components
 - [Tailwind CSS](https://tailwindcss.com/) - CSS framework
