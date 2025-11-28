@@ -198,7 +198,7 @@ const AddMember = () => {
       <div className="flex-1 p-6">
         <div className="flex justify-between mb-6">
           <h2 className="text-2xl font-bold">Daftar Member Organisasi</h2>
-          <Button onClick={() => setShowCreateModal(true)}>+ Tambah Member</Button>
+          {/* <Button onClick={() => setShowCreateModal(true)}>+ Tambah Member</Button> */}
         </div>
 
         <Input
