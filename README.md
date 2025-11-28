@@ -117,11 +117,6 @@ src/
 ### API Integration
 Aplikasi ini terintegrasi dengan backend API. Pastikan backend server berjalan dan dapat diakses.
 
-## Kontak
-
-- Project Link: [GitHub Repository]
-- Email: your-email@example.com
-
 ## Acknowledgments
 
 - [ShadCN UI](https://ui.shadcn.com/) - UI components
