@@ -40,30 +40,26 @@ interface TransactionDetail {
 
 export default function TransactionDetailAdmin() {
   const { divisionId, projectId, transactionId } = useParams();
-  console.log("Transaction ID:", transactionId);
   const navigate = useNavigate();
   const [trx, setTrx] = useState<TransactionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const token = localStorage.getItem("token");
+  const userRole = localStorage.getItem("role") ?? "MEMBER";
 
-  // Editable fields
+  const canEdit = userRole === "AUDITOR" || userRole === "ADMIN";
+
   const [type, setType] = useState("EXPENSE");
   const [status, setStatus] = useState("Pending");
   const [description, setDescription] = useState("");
 
-  // ===============================
-  // GET DETAIL
-  // ===============================
   useEffect(() => {
     const fetchDetail = async () => {
       try {
         const res = await fetch(
           `https://backend-auchan-production.up.railway.app/api/transactions/${transactionId}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
 
         const json = await res.json();
@@ -83,11 +79,8 @@ export default function TransactionDetailAdmin() {
     fetchDetail();
   }, [transactionId]);
 
-  // ===============================
-  // UPDATE TRANSACTION
-  // ===============================
   const updateTransaction = async () => {
-    if (!trx) return;
+    if (!canEdit) return alert("You don't have permission.");
 
     setSaving(true);
     try {
@@ -100,7 +93,6 @@ export default function TransactionDetailAdmin() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            // hanya field yang boleh diupdate
             type,
             description,
           }),
@@ -116,17 +108,15 @@ export default function TransactionDetailAdmin() {
       }
     } catch (err) {
       console.error(err);
-      alert("Error updating transaction");
+      alert("Error updating");
     }
     setSaving(false);
   };
 
-  // ===============================
-  // DELETE TRANSACTION
-  // ===============================
   const deleteTransaction = async () => {
-    const confirmDelete = confirm("Are you sure you want to delete this?");
-    if (!confirmDelete) return;
+    if (!canEdit) return alert("You don't have permission.");
+
+    if (!confirm("Are you sure you want to delete this?")) return;
 
     try {
       await fetch(
@@ -145,92 +135,106 @@ export default function TransactionDetailAdmin() {
     }
   };
 
-  // ===============================
-  // UI
-  // ===============================
-  if (loading) return <div className="p-8">Loading...</div>;
-  if (!trx) return <div className="p-8">Transaction not found.</div>;
+  if (loading) return (
+    <div className="flex">
+      <Sidebar />
+      <div className="p-10 w-full text-center text-lg animate-pulse">Loading transaction details...</div>
+    </div>
+  );
+
+  if (!trx) return (
+    <div className="flex">
+      <Sidebar />
+      <div className="p-10 w-full text-center text-red-500">Transaction not found.</div>
+    </div>
+  );
 
   return (
-    <div className="flex">
+    <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
 
       <div className="p-8 w-full">
-        <Card>
-          <CardHeader>
-            <CardTitle>Admin Transaction Detail</CardTitle>
+        <Card className="shadow-md border rounded-xl">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-2xl font-bold">Admin Transaction Detail</CardTitle>
+            <p className="text-sm text-muted-foreground">Review and audit transaction details</p>
           </CardHeader>
 
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-8">
 
-            {/* NON EDITABLE */}
-            <div><strong>ID:</strong> {trx.id}</div>
+            {/* READ-ONLY INFO */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-lg border shadow-sm">
+              <div>
+                <h3 className="font-semibold text-lg mb-4">General Information</h3>
 
-            <div>
-              <strong>Amount:</strong> Rp {trx.amount} (read-only)
+                <p><strong>ID:</strong> {trx.id}</p>
+                <p><strong>Amount:</strong> Rp {Number(trx.amount).toLocaleString("id-ID")}</p>
+                <p><strong>Category:</strong> {trx.category?.categoryName}</p>
+                <p><strong>Date:</strong> {new Date(trx.transactionDate).toLocaleString()}</p>
+                <p><strong>Status:</strong> {trx.status}</p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-lg mb-4">Project Information</h3>
+
+                <p><strong>Project:</strong> {trx.project?.projectName}</p>
+                <p><strong>Division:</strong> {trx.project?.division?.name}</p>
+                <p><strong>Budget Allocated:</strong> Rp {Number(trx.project?.budgetAllocated).toLocaleString("id-ID")}</p>
+                <p><strong>Submitted By:</strong> {trx.user?.name} ({trx.user?.email})</p>
+              </div>
             </div>
 
-            <div>
-              <strong>Category:</strong> {trx.category?.categoryName} (read-only)
+            {/* EDITABLE SECTION */}
+            <div className="bg-white p-6 rounded-lg border shadow-sm">
+              <h3 className="font-semibold text-lg mb-4">Editable Fields (Auditor Only)</h3>
+
+              {!canEdit && (
+                <p className="text-sm text-red-500 mb-4">
+                  You do not have permission to edit this transaction.
+                </p>
+              )}
+
+              <div className="space-y-4">
+                
+                <div>
+                  <strong>Type</strong>
+                  <Select value={type} onValueChange={setType} disabled={!canEdit}>
+                    <SelectTrigger className="w-[200px] mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="EXPENSE">EXPENSE</SelectItem>
+                      <SelectItem value="INCOME">INCOME</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <strong>Description</strong>
+                  <Input 
+                    value={description} 
+                    disabled={!canEdit}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div>
-              <strong>Date:</strong>{" "}
-              {new Date(trx.transactionDate).toLocaleString()} (read-only)
-            </div>
+            {/* ACTION BUTTONS */}
+            {canEdit && (
+                <div className="w-full flex justify-center mt-4">
+                    <div className="flex gap-4">
+                    <Button disabled={saving} onClick={updateTransaction}>
+                        {saving ? "Saving..." : "Update"}
+                    </Button>
 
-            <hr />
-
-            {/* EDITABLE FIELDS */}
-            <h3 className="font-semibold text-lg">Editable Fields (Admin)</h3>
-
-            <div>
-              <strong>Type:</strong>
-              <Select value={type} onValueChange={setType}>
-                <SelectTrigger className="w-[200px] mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="EXPENSE">EXPENSE</SelectItem>
-                  <SelectItem value="INCOME">INCOME</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <strong>Status:</strong>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="w-[200px] mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PENDING">Pending</SelectItem>
-                  <SelectItem value="APPROVED">Approved</SelectItem>
-                  <SelectItem value="REJECTED">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <strong>Description:</strong>
-              <Input
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-
-            <hr />
-
-            <div className="flex gap-4">
-              <Button disabled={saving} onClick={updateTransaction}>
-                {saving ? "Saving..." : "Update"}
-              </Button>
-
-              <Button variant="destructive" onClick={deleteTransaction}>
-                Delete
-              </Button>
-            </div>
+                    <Button variant="destructive" onClick={deleteTransaction}>
+                        Delete
+                    </Button>
+                    </div>
+                </div>
+                )}
 
           </CardContent>
         </Card>
