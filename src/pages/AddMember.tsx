@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import Sidebar from "@/components/Sidebar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -11,16 +10,28 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 
 interface Member {
-  id: string;
   userId: string;
+  orgId: string;
   roleId: number;
+  joinedAt?: string;
   user: {
+    id?: string;
     name: string;
     email: string;
+  };
+  role?: {
+    id?: number;
+    name?: string;
   };
 }
 
@@ -35,15 +46,9 @@ const getRoleName = (roleId: number) => {
 };
 
 const AddMember = () => {
-  const navigate = useNavigate();
-
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [search, setSearch] = useState("");
-
-  // pagination
-  const [page, setPage] = useState(1);
 
   // Create Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -63,26 +68,16 @@ const AddMember = () => {
 
   const fetchMembers = async () => {
     try {
-      if (!orgId) {
-        toast.error("Organization ID tidak ditemukan");
-        return;
-      }
-
       const res = await fetch(
         `https://backend-auchan-production.up.railway.app/api/organizations/${orgId}/members`,
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
       const data = await res.json();
 
-      if (!res.ok) {
-        toast.error(data.message || "Gagal mengambil data member");
-        return;
-      }
+      if (!res.ok) return toast.error(data.message || "Gagal memuat data");
 
       setMembers(data.data || []);
     } catch {
@@ -94,7 +89,7 @@ const AddMember = () => {
 
   useEffect(() => {
     fetchMembers();
-  }, [page]);
+  }, []);
 
   // ====================================
   // CREATE
@@ -112,16 +107,15 @@ const AddMember = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ email: newEmail, roleId: parseInt(newRoleId) }),
+          body: JSON.stringify({
+            email: newEmail,
+            roleId: Number(newRoleId),
+          }),
         }
       );
 
       const data = await res.json();
-
-      if (!res.ok) {
-        toast.error(data.message || "Gagal menambahkan member");
-        return;
-      }
+      if (!res.ok) return toast.error(data.message || "Gagal menambahkan member");
 
       toast.success("Member berhasil ditambahkan");
       setShowCreateModal(false);
@@ -138,35 +132,33 @@ const AddMember = () => {
   // ====================================
   const openEdit = (member: Member) => {
     setSelectedMember(member);
-    setEditRole(member.roleId.toString());
+    setEditRole(String(member.roleId));
     setShowEditModal(true);
   };
 
   const handleEdit = async () => {
-    if (!editRole) return toast.error("Role wajib dipilih");
     if (!selectedMember) return;
+    if (!editRole) return toast.error("Role wajib dipilih");
 
     try {
       const res = await fetch(
-        `https://backend-auchan-production.up.railway.app/api/organizations/${orgId}/members/${selectedMember.id}`,
+        `https://backend-auchan-production.up.railway.app/api/organizations/${orgId}/members/${selectedMember?.userId}`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ roleId: parseInt(editRole) }),
+          body: JSON.stringify({
+            roleId: Number(editRole),
+          }),
         }
       );
 
       const data = await res.json();
+      if (!res.ok) return toast.error(data.message || "Gagal memperbarui role");
 
-      if (!res.ok) {
-        toast.error(data.message || "Gagal mengupdate member");
-        return;
-      }
-
-      toast.success("Member berhasil diupdate");
+      toast.success("Role member diperbarui");
       setShowEditModal(false);
       fetchMembers();
     } catch {
@@ -182,19 +174,14 @@ const AddMember = () => {
 
     try {
       const res = await fetch(
-        `https://backend-auchan-production.up.railway.app/api/organizations/${orgId}/members/${selectedMember.id}`,
+        `https://backend-auchan-production.up.railway.app/api/organizations/${orgId}/members/${selectedMember?.userId}`,
         {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
-      if (!res.ok) {
-        toast.error("Gagal menghapus member");
-        return;
-      }
+      if (!res.ok) return toast.error("Gagal menghapus member");
 
       toast.success("Member berhasil dihapus");
       setShowDeleteModal(false);
@@ -209,75 +196,71 @@ const AddMember = () => {
       <Sidebar />
 
       <div className="flex-1 p-6">
-        {/* HEADER */}
         <div className="flex justify-between mb-6">
           <h2 className="text-2xl font-bold">Daftar Member Organisasi</h2>
-          <Button onClick={() => setShowCreateModal(true)}>+ Tambah Member</Button>
+          {/* <Button onClick={() => setShowCreateModal(true)}>+ Tambah Member</Button> */}
         </div>
 
-        {/* SEARCH */}
         <Input
-          placeholder="Cari member..."
+          placeholder="Cari nama atau email..."
           className="mb-4 max-w-sm"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
 
-        {/* LIST */}
-        {loading ? (
-          <p>Loading...</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {members
-              .filter((m) =>
-                m.user.name.toLowerCase().includes(search.toLowerCase()) ||
-                m.user.email.toLowerCase().includes(search.toLowerCase())
-              )
-              .map((m) => (
-                <Card key={m.id} className="hover:shadow-lg transition">
-                  <CardHeader>
-                    <CardTitle className="flex justify-between items-center">
-                      <span>{m.user.name}</span>
+        {/* TABLE */}
+        <Card className="overflow-hidden">
+          <table className="w-full border-collapse">
+            <thead className="bg-gray-100 text-left">
+              <tr>
+                <th className="p-3 border">Nama</th>
+                <th className="p-3 border">Email</th>
+                <th className="p-3 border">Role</th>
+                <th className="p-3 border text-center">Aksi</th>
+              </tr>
+            </thead>
 
-                      <div className="flex gap-2">
-                        <Button
-                          variant="secondary"
-                          onClick={() => openEdit(m)}
-                        >
-                          Edit
-                        </Button>
-
-                        <Button
-                          variant="destructive"
-                          onClick={() => {
-                            setSelectedMember(m);
-                            setShowDeleteModal(true);
-                          }}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </CardTitle>
-                  </CardHeader>
-
-                  <CardContent>
-                    <p className="text-sm text-gray-600 mb-2">{m.user.email}</p>
-                    <p className="text-xs text-gray-500">
-                      Role: <span className="font-medium">{getRoleName(m.roleId)}</span>
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-          </div>
-        )}
-
-        {/* PAGINATION */}
-        <div className="flex gap-4 justify-center mt-6">
-          <Button disabled={page === 1} onClick={() => setPage(page - 1)}>
-            Prev
-          </Button>
-          <Button onClick={() => setPage(page + 1)}>Next</Button>
-        </div>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={4} className="p-4 text-center">
+                    Loading...
+                  </td>
+                </tr>
+              ) : (
+                members
+                  .filter(
+                    (m) =>
+                      m.user.name.toLowerCase().includes(search.toLowerCase()) ||
+                      m.user.email.toLowerCase().includes(search.toLowerCase())
+                  )
+                  .map((m) => (
+                    <tr key={m.userId} className="border-t">
+                      <td className="p-3 border">{m.user.name}</td>
+                      <td className="p-3 border">{m.user.email}</td>
+                      <td className="p-3 border">{getRoleName(m.roleId)}</td>
+                      <td className="p-3 border text-center">
+                        <div className="flex justify-center gap-2">
+                          <Button variant="secondary" onClick={() => openEdit(m)}>
+                            Edit
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            onClick={() => {
+                              setSelectedMember(m);
+                              setShowDeleteModal(true);
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+              )}
+            </tbody>
+          </table>
+        </Card>
 
         {/* CREATE MODAL */}
         <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
@@ -319,12 +302,12 @@ const AddMember = () => {
         <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Edit Member</DialogTitle>
+              <DialogTitle>Edit Role Member</DialogTitle>
             </DialogHeader>
 
             <div className="space-y-4">
               <p className="text-sm text-gray-600">
-                Member: {selectedMember?.user.name} ({selectedMember?.user.email})
+                {selectedMember?.user.name} ({selectedMember?.user.email})
               </p>
 
               <Select value={editRole} onValueChange={setEditRole}>
@@ -353,11 +336,11 @@ const AddMember = () => {
         <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Hapus Member?</DialogTitle>
+              <DialogTitle>Hapus Member</DialogTitle>
             </DialogHeader>
 
             <p>
-              Yakin ingin menghapus member{" "}
+              Yakin ingin menghapus{" "}
               <b>{selectedMember?.user.name}</b> dari organisasi?
             </p>
 

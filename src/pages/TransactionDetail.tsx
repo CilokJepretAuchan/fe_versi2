@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import Sidebar from "@/components/Sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, FileText, Hash, Paperclip } from "lucide-react";
 
 interface TransactionDetail {
   id: string;
@@ -35,7 +37,7 @@ interface TransactionDetail {
   attachments: any[];
 }
 
-export default function TransactionDetail() {
+export default function TransactionDetailPage() {
   const { id } = useParams();
   const [trx, setTrx] = useState<TransactionDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,16 +50,12 @@ export default function TransactionDetail() {
         const res = await fetch(
           `https://backend-auchan-production.up.railway.app/api/transactions/${id}`,
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` },
           }
         );
 
         const json = await res.json();
-        if (json.success) {
-          setTrx(json.data);
-        }
+        if (json.success) setTrx(json.data);
       } catch (err) {
         console.error(err);
       } finally {
@@ -68,94 +66,156 @@ export default function TransactionDetail() {
     fetchDetail();
   }, [id]);
 
-  if (loading) return <div className="p-8">Loading...</div>;
-  if (!trx) return <div className="p-8">Transaction not found.</div>;
-
   return (
-    <div className="flex">
+    <div className="flex min-h-screen bg-background">
+      {/* Sidebar tidak ikut loading */}
       <Sidebar />
 
-      <div className="p-8 w-full">
-        <Card>
-          <CardHeader>
-            <CardTitle>Transaction Detail</CardTitle>
-          </CardHeader>
+      <main className="flex-1 p-8">
+        {/* HEADER */}
+        <div className="flex items-center gap-3 mb-6">
+          <FileText className="w-8 h-8 text-primary" />
+          <div>
+            <h1 className="text-3xl font-bold">Transaction Report Detail</h1>
+            <p className="text-muted-foreground">
+              Analisis lengkap transaksi & status blockchain
+            </p>
+          </div>
+        </div>
 
-          <CardContent className="space-y-4">
+        {/* LOADING SKELETON */}
+        {loading && (
+          <div className="space-y-4">
+            <div className="h-10 bg-muted animate-pulse rounded-xl" />
+            <div className="h-40 bg-muted animate-pulse rounded-xl" />
+            <div className="h-40 bg-muted animate-pulse rounded-xl" />
+            <div className="h-40 bg-muted animate-pulse rounded-xl" />
+          </div>
+        )}
 
-            <div>
-              <strong>ID:</strong> {trx.id}
-            </div>
+        {/* DATA */}
+        {!loading && trx && (
+          <div className="space-y-8">
 
-            <div>
-              <strong>Amount:</strong> Rp {trx.amount}
-            </div>
+            {/* SECTION: INFO UTAMA */}
+            <Card className="shadow-lg border-primary/20">
+              <CardHeader>
+                <CardTitle className="text-xl font-semibold">
+                  Informasi Transaksi
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <p><strong>ID:</strong> {trx.id}</p>
+                  <p>
+                    <strong>Amount:</strong>{" "}
+                    <span className="font-semibold text-foreground">
+                      Rp {Number(trx.amount).toLocaleString("id-ID")}
+                    </span>
+                  </p>
+                  <p><strong>Type:</strong> {trx.type}</p>
+                  <p><strong>Status:</strong> {trx.status}</p>
+                  <p>
+                    <strong>Tanggal:</strong>{" "}
+                    {new Date(trx.transactionDate).toLocaleString()}
+                  </p>
+                </div>
 
-            <div>
-              <strong>Type:</strong> {trx.type}
-            </div>
+                <div className="space-y-2">
+                  <p className="font-semibold">AI Anomaly Score:</p>
+                  {trx.aiAnomalyScore === null ? (
+                    <Badge variant="outline">N/A</Badge>
+                  ) : (
+                    <Badge
+                      variant={trx.aiAnomalyScore >= 0.7 ? "destructive" : "default"}
+                      className="rounded-lg text-sm px-3 py-1"
+                    >
+                      {(trx.aiAnomalyScore * 100).toFixed(1)}%
+                    </Badge>
+                  )}
 
-            <div>
-              <strong>Status:</strong> {trx.status}
-            </div>
+                  <div className="mt-4">
+                    <strong>Description</strong>
+                    <div className="bg-muted p-3 rounded-md mt-1">
+                      {trx.description || "Tidak ada deskripsi"}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-            <div>
-              <strong>Description:</strong> {trx.description}
-            </div>
+            {/* SECTION: PROJECT */}
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle>Project & Category</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <strong>Project:</strong> {trx.project?.projectName}
+                </div>
+                <div>
+                  <strong>Budget:</strong>{" "}
+                  Rp {Number(trx.project?.budgetAllocated).toLocaleString("id-ID")}
+                </div>
+                <div>
+                  <strong>Division:</strong> {trx.project?.division?.name}
+                </div>
+                <div>
+                  <strong>Category:</strong> {trx.category?.categoryName}
+                </div>
+              </CardContent>
+            </Card>
 
-            <div>
-              <strong>Transaction Date:</strong>{" "}
-              {new Date(trx.transactionDate).toLocaleString()}
-            </div>
+            {/* SECTION: BLOCKCHAIN */}
+            {/* <Card className="shadow-lg">
+              <CardHeader className="flex items-center gap-2">
+                <Hash className="w-5 h-5 text-primary" />
+                <CardTitle>Blockchain Record</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p><strong>Hash:</strong> {trx.blockchainHash || "-"}</p>
+                <p><strong>Transaction ID:</strong> {trx.blockchainTxId || "-"}</p>
+              </CardContent>
+            </Card> */}
 
-            <hr />
+            {/* SECTION: ATTACHMENTS */}
+            <Card className="shadow-lg">
+              <CardHeader className="flex items-center gap-2">
+                <Paperclip className="w-5 h-5 text-primary" />
+                <CardTitle>Attachments</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {trx.attachments?.length > 0 ? (
+                  <ul className="list-disc pl-5 space-y-2">
+                    {trx.attachments.map((att, index) => (
+                      <li key={index}>
+                        {att.name || att.filename || `File ${index + 1}`}
+                        {att.url && (
+                          <a
+                            className="text-primary ml-2 underline"
+                            href={att.url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            (Open)
+                          </a>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground">Tidak ada attachment</p>
+                )}
+              </CardContent>
+            </Card>
 
-            <h3 className="font-semibold text-lg">User</h3>
-            <div>
-              <strong>Name:</strong> {trx.user?.name}
-            </div>
-            <div>
-              <strong>Email:</strong> {trx.user?.email}
-            </div>
+          </div>
+        )}
 
-            <hr />
-
-            <h3 className="font-semibold text-lg">Category</h3>
-            <div>
-              <strong>Category:</strong> {trx.category?.categoryName}
-            </div>
-
-            <hr />
-
-            <h3 className="font-semibold text-lg">Project</h3>
-            <div>
-              <strong>Project Name:</strong> {trx.project?.projectName}
-            </div>
-            <div>
-              <strong>Budget:</strong> Rp {trx.project?.budgetAllocated}
-            </div>
-            <div>
-              <strong>Division:</strong> {trx.project?.division?.name}
-            </div>
-
-            <hr />
-
-            <h3 className="font-semibold text-lg">Blockchain</h3>
-            <div>
-              <strong>Hash:</strong> {trx.blockchainHash ?? "-"}
-            </div>
-            <div>
-              <strong>TxID:</strong> {trx.blockchainTxId ?? "-"}
-            </div>
-
-            <hr />
-
-            <h3 className="font-semibold text-lg">Attachments</h3>
-            <div>{trx.attachments.length > 0 ? "Available" : "None"}</div>
-
-          </CardContent>
-        </Card>
-      </div>
+        {!loading && !trx && (
+          <div className="text-muted-foreground">Transaction not found.</div>
+        )}
+      </main>
     </div>
   );
 }
