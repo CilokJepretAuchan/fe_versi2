@@ -7,6 +7,7 @@ import {
   Blocks,
   FileBarChart,
   LogOut,
+  UserPlus,
   Shield,
   Building2
 } from "lucide-react";
@@ -15,7 +16,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", roles: ["ADMIN", "TREASURER", "AUDITOR", "MEMBER"] },
 
   // hanya ADMIN & TREASURER yang bisa input transaksi
-  { icon: PlusCircle, label: "Input Transaksi", path: "/add-transaction", roles: ["ADMIN", "TREASURER"] },
+  // { icon: PlusCircle, label: "Input Transaksi", path: "/add-transaction", roles: ["ADMIN", "TREASURER"] },
 
   // riwayat transaksi boleh untuk semua role
   { icon: History, label: "Riwayat Transaksi", path: "/transaction-history", roles: ["ADMIN", "TREASURER", "AUDITOR", "MEMBER"] },
@@ -27,6 +28,8 @@ const menuItems = [
   { icon: FileBarChart, label: "Laporan AI", path: "/ai-reports", roles: ["ADMIN", "AUDITOR"] },
   // Create Divisi — hanya ADMIN yang bisa membuat divisi
   { icon: PlusCircle, label: "Create Divisi", path: "/divisi", roles: ["ADMIN"] },
+
+  { icon: UserPlus, label: "Add Member", path: "/add-member", roles: ["ADMIN"] },
 ];
 
 const Sidebar = () => {

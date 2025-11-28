@@ -9,16 +9,17 @@ import {
   Legend,
 } from "recharts";
 
-const data = [
-  { month: "Jan", pemasukan: 4000000, pengeluaran: 2400000 },
-  { month: "Feb", pemasukan: 3000000, pengeluaran: 1398000 },
-  { month: "Mar", pemasukan: 2000000, pengeluaran: 9800000 },
-  { month: "Apr", pemasukan: 2780000, pengeluaran: 3908000 },
-  { month: "Mei", pemasukan: 1890000, pengeluaran: 4800000 },
-  { month: "Jun", pemasukan: 2390000, pengeluaran: 3800000 },
-];
+interface ChartData {
+  month: string;
+  pemasukan: number;
+  pengeluaran: number;
+}
 
-const ChartLine = () => {
+interface ChartLineProps {
+  data: ChartData[];
+}
+
+const ChartLine = ({ data }: ChartLineProps) => {
   return (
     <div className="bg-gradient-card rounded-2xl shadow-card p-6 border border-border">
       <h3 className="text-xl font-bold text-foreground mb-6">

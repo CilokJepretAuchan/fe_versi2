@@ -3,12 +3,77 @@ import { useNavigate } from "react-router-dom";
 import Sidebar from "@/components/Sidebar";
 import CardStat from "@/components/CardStat";
 import ChartLine from "@/components/ChartLine";
-import { TrendingUp, TrendingDown, Receipt, AlertCircle } from "lucide-react";
+import { TrendingUp, TrendingDown, Receipt, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+
+interface Transaction {
+  id: string;
+  description: string;
+  type: string;
+  amount: string;
+  transactionDate: string;
+  status: string;
+  aiAnomalyScore: number | null;
+  category: {
+    categoryName: string;
+  };
+  user: {
+    name: string;
+  };
+}
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [userName, setUserName] = useState("User");
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  const token = localStorage.getItem("token");
+
+  const fetchTransactions = async () => {
+    if (!token) {
+      console.error("Token tidak ditemukan");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const params = new URLSearchParams({
+        page: "1",
+        limit: "20",
+      });
+
+      const url = `https://backend-auchan-production.up.railway.app/api/transactions?${params.toString()}`;
+
+      console.log("REQUEST:", url);
+
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const raw = await res.text();
+      console.log("RAW RESPONSE:", raw);
+
+      if (!res.ok) {
+        console.error("Fetch failed:", res.status, raw);
+        setLoading(false);
+        return;
+      }
+
+      const json = JSON.parse(raw);
+      const trx = json?.data?.data || [];
+      setTransactions(trx);
+      setLoading(false);
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const user = localStorage.getItem("user");
@@ -18,15 +83,64 @@ const Dashboard = () => {
     }
     const parsedUser = JSON.parse(user);
     setUserName(parsedUser.name);
+
+    fetchTransactions();
   }, [navigate]);
 
-  const recentTransactions = [
-    { id: "TRX001", title: "Pembelian Laptop", type: "pengeluaran", amount: 15000000, date: "2025-01-20" },
-    { id: "TRX002", title: "Penjualan Produk", type: "pemasukan", amount: 8500000, date: "2025-01-19" },
-    { id: "TRX003", title: "Gaji Karyawan", type: "pengeluaran", amount: 25000000, date: "2025-01-18" },
-    { id: "TRX004", title: "Investasi Modal", type: "pemasukan", amount: 50000000, date: "2025-01-17" },
-    { id: "TRX005", title: "Sewa Kantor", type: "pengeluaran", amount: 12000000, date: "2025-01-16" },
-  ];
+  // Calculate stats from transactions
+  const totalIncome = transactions
+    .filter((trx) => trx.type === "INCOME")
+    .reduce((sum, trx) => sum + parseFloat(trx.amount), 0);
+
+  const totalExpense = transactions
+    .filter((trx) => trx.type === "EXPENSE")
+    .reduce((sum, trx) => sum + parseFloat(trx.amount), 0);
+
+  const totalTransactions = transactions.length;
+
+  const alerts = transactions.filter((trx) => trx.aiAnomalyScore !== null).length;
+
+  // Prepare chart data from transactions
+  const chartData = transactions.reduce((acc, trx) => {
+    const date = new Date(trx.transactionDate);
+    const month = date.toLocaleDateString("id-ID", { month: "short" });
+    const existing = acc.find(item => item.month === month);
+    const amount = parseFloat(trx.amount);
+
+    if (existing) {
+      if (trx.type === "INCOME") {
+        existing.pemasukan += amount;
+      } else {
+        existing.pengeluaran += amount;
+      }
+    } else {
+      acc.push({
+        month,
+        pemasukan: trx.type === "INCOME" ? amount : 0,
+        pengeluaran: trx.type === "EXPENSE" ? amount : 0,
+      });
+    }
+    return acc;
+  }, [] as { month: string; pemasukan: number; pengeluaran: number }[]).slice(0, 6);
+
+  // Pagination logic
+  const totalPages = Math.ceil(transactions.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedTransactions = transactions.slice(startIndex, endIndex);
+
+  // Format transactions for display
+  const displayTransactions = paginatedTransactions.map((trx) => ({
+    id: trx.id,
+    title: trx.description,
+    type: trx.type === "INCOME" ? "pemasukan" : "pengeluaran",
+    amount: parseFloat(trx.amount),
+    date: new Date(trx.transactionDate).toLocaleDateString("id-ID"),
+  }));
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -42,33 +156,33 @@ const Dashboard = () => {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <CardStat
             title="Total Pemasukan"
-            value="Rp 58.5M"
+            value={`Rp ${totalIncome.toLocaleString("id-ID")}`}
             icon={TrendingUp}
             trend="+12.5%"
             trendUp={true}
           />
           <CardStat
             title="Total Pengeluaran"
-            value="Rp 52M"
+            value={`Rp ${totalExpense.toLocaleString("id-ID")}`}
             icon={TrendingDown}
             trend="-8.2%"
             trendUp={false}
           />
           <CardStat
             title="Total Transaksi"
-            value="1,234"
+            value={totalTransactions.toString()}
             icon={Receipt}
           />
           <CardStat
             title="Alert AI"
-            value="3"
+            value={alerts.toString()}
             icon={AlertCircle}
           />
         </div>
 
         {/* Chart */}
         <div className="mb-8">
-          <ChartLine />
+          <ChartLine data={chartData} />
         </div>
 
         {/* Recent Transactions */}
@@ -88,7 +202,7 @@ const Dashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {recentTransactions.map((trx) => (
+                {displayTransactions.map((trx) => (
                   <tr key={trx.id} className="border-b border-border hover:bg-muted/50">
                     <td className="py-3 px-4 text-foreground font-medium">{trx.id}</td>
                     <td className="py-3 px-4 text-foreground">{trx.title}</td>
@@ -109,6 +223,47 @@ const Dashboard = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center mt-6 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="rounded-lg"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </Button>
+
+              <div className="flex gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handlePageChange(page)}
+                    className="rounded-lg"
+                  >
+                    {page}
+                  </Button>
+                ))}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="rounded-lg"
+              >
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </main>
     </div>
