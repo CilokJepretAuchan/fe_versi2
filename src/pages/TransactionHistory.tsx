@@ -4,8 +4,9 @@ import Sidebar from "@/components/Sidebar";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Eye } from "lucide-react";
+import { Search, Eye, Loader2 } from "lucide-react";
 
+// --- Types ---
 type RawTransaction = {
   id: string;
   description?: string;
@@ -18,7 +19,6 @@ type RawTransaction = {
     name?: string;
     division?: { divisionName?: string; name?: string };
   };
-  // other possible fields from backend...
 };
 
 type Transaction = {
@@ -32,28 +32,43 @@ type Transaction = {
   division: string;
 };
 
+// --- Helper Functions ---
+const readCategoryName = (t: RawTransaction) =>
+  t.category?.categoryName || t.category?.name || "—";
+const readProjectName = (t: RawTransaction) =>
+  t.project?.projectName || t.project?.name || "—";
+const readDivisionName = (t: RawTransaction) =>
+  t.project?.division?.divisionName || t.project?.division?.name || "—";
+
 const TransactionHistory = () => {
   const navigate = useNavigate();
   const { divisionId, projectId } = useParams();
-
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-
   const token = localStorage.getItem("token");
 
-  // helper to safely read category/project/division names from many possible shapes
-  const readCategoryName = (t: RawTransaction) =>
-    t.category?.categoryName || t.category?.name || "—";
-  const readProjectName = (t: RawTransaction) =>
-    t.project?.projectName || t.project?.name || "—";
-  const readDivisionName = (t: RawTransaction) =>
-    t.project?.division?.divisionName || t.project?.division?.name || "—";
+  // --- State ---
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // fetch and normalize
+  // Pagination & Search State
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const itemsPerPage = 10;
+
+  // --- Effect: Handle Search Debounce ---
+  // Mencegah hit API setiap kali user mengetik 1 huruf
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1); // Reset ke halaman 1 saat search berubah
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  // --- Effect: Fetch Data (Server-Side) ---
   useEffect(() => {
     const fetchTransactions = async () => {
       if (!token) {
@@ -66,47 +81,37 @@ const TransactionHistory = () => {
       setError(null);
 
       try {
+        // 1. Construct Query Params
         const params = new URLSearchParams({
-          page: "1",
-          limit: "50",
+          page: currentPage.toString(),
+          limit: itemsPerPage.toString(),
         });
 
         if (divisionId) params.append("divisionId", divisionId);
         if (projectId) params.append("projectId", projectId);
+        if (debouncedSearch) params.append("search", debouncedSearch); // Kirim search ke backend
 
         const url = `https://backend-auchan-production.up.railway.app/api/transactions?${params.toString()}`;
-        console.log("REQUEST:", url);
-
+        
+        // 2. Fetch
         const res = await fetch(url, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         const rawText = await res.text();
-        console.log("RAW RESPONSE:", rawText);
-
+        
         if (!res.ok) {
-          // try parse JSON message if exists
-          try {
-            const parsed = JSON.parse(rawText);
-            setError(parsed?.message || JSON.stringify(parsed) || "Fetch failed");
-          } catch {
-            setError(`Fetch failed: ${res.status} ${res.statusText}`);
-          }
-          setTransactions([]);
-          setLoading(false);
-          return;
+          throw new Error(`Gagal mengambil data: ${res.statusText}`);
         }
 
         const json = JSON.parse(rawText);
 
-        // API returns data wrapped: { success: true, data: { meta:..., data: [...] } }
-        // but sometimes it may return { success: true, data: [...] } — handle both.
-        const rawList: RawTransaction[] =
-          Array.isArray(json?.data?.data) ? json.data.data : Array.isArray(json?.data) ? json.data : [];
+        // 3. Handle API Response Structure
+        // Struktur: { data: { meta: { total: ... }, data: [...] } }
+        const rawList: RawTransaction[] = json?.data?.data || [];
+        const fetchedTotal = json?.data?.meta?.total || 0;
 
-        // normalize to frontend Transaction[]
+        // 4. Normalize Data
         const normalized: Transaction[] = rawList.map((t) => ({
           id: t.id,
           description: t.description || "-",
@@ -119,36 +124,32 @@ const TransactionHistory = () => {
         }));
 
         setTransactions(normalized);
-      } catch (err) {
+        setTotalItems(fetchedTotal);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (err: any) {
         console.error("Fetch error:", err);
-        setError("Kesalahan jaringan atau parsing response.");
+        setError(err.message || "Terjadi kesalahan jaringan.");
         setTransactions([]);
+        setTotalItems(0);
       } finally {
         setLoading(false);
       }
     };
 
     fetchTransactions();
-  }, [divisionId, projectId, token]);
+  }, [divisionId, projectId, token, currentPage, itemsPerPage, debouncedSearch]);
 
-  // safe search & filter (removed category filter)
-  const q = search.trim().toLowerCase();
-  const filtered = transactions.filter((trx) => {
-    const matchesSearch =
-      !q ||
-      trx.description.toLowerCase().includes(q) ||
-      trx.project.toLowerCase().includes(q) ||
-      trx.division.toLowerCase().includes(q);
+  // --- Pagination Logic ---
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-    return matchesSearch;
-  });
-
-  // pagination logic
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-  const paginatedData = filtered.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // Helper untuk navigasi detail
+  const handleViewDetail = (id: string) => {
+    const base = divisionId && projectId
+      ? `/divisions/${divisionId}/projects/${projectId}/transactions/${id}`
+      : `/transactions/${id}`;
+    navigate(base);
+  };
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -157,11 +158,11 @@ const TransactionHistory = () => {
       <main className="flex-1 p-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">Riwayat Transaksi</h1>
-          <p className="text-muted-foreground">Lihat dan kelola semua transaksi</p>
+          <p className="text-muted-foreground">Lihat dan kelola semua transaksi (Server-side Pagination)</p>
         </div>
 
         <div className="bg-gradient-card rounded-2xl shadow-card p-6 border border-border">
-          {/* Filters */}
+          {/* --- Search Bar --- */}
           <div className="flex flex-col md:flex-row gap-4 mb-6 items-start">
             <div className="flex-1 relative w-full md:w-auto">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -175,13 +176,18 @@ const TransactionHistory = () => {
             </div>
           </div>
 
+          {/* --- Content Area --- */}
           {loading ? (
-            <div className="text-center py-12">Loading transactions...</div>
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              <Loader2 className="w-8 h-8 animate-spin mb-2" />
+              <p>Memuat data...</p>
+            </div>
           ) : error ? (
-            <div className="text-center py-6 text-red-600">{error}</div>
+            <div className="text-center py-6 text-red-600 bg-red-50 rounded-lg border border-red-100">
+              {error}
+            </div>
           ) : (
             <>
-              {/* Table */}
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -198,45 +204,41 @@ const TransactionHistory = () => {
                   </thead>
 
                   <tbody>
-                    {filtered.length === 0 ? (
+                    {transactions.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="text-center p-6 text-muted-foreground">
-                          Tidak ada transaksi ditemukan
+                        <td colSpan={8} className="text-center p-8 text-muted-foreground">
+                          Tidak ada transaksi ditemukan.
                         </td>
                       </tr>
                     ) : (
-                      paginatedData.map((trx, index) => (
-                        <tr key={trx.id} className="border-b border-border hover:bg-muted/50">
-                          <td className="py-3 px-4 font-medium">{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                      transactions.map((trx, index) => (
+                        <tr key={trx.id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                          <td className="py-3 px-4 font-medium">
+                             {/* Hitung nomor urut absolut berdasarkan halaman */}
+                            {(currentPage - 1) * itemsPerPage + index + 1}
+                          </td>
                           <td className="py-3 px-4">{trx.description}</td>
                           <td className="py-3 px-4">{trx.project}</td>
                           <td className="py-3 px-4">{trx.category}</td>
                           <td className="py-3 px-4">
                             <Badge
-                              variant={trx.type.toLowerCase() === "income" ? "default" : "destructive"}
+                              variant={trx.type === "INCOME" ? "default" : "destructive"}
                               className="rounded-lg"
                             >
                               {trx.type}
                             </Badge>
                           </td>
                           <td className="py-3 px-4 font-medium">
-                            Rp {Number(trx.amount).toLocaleString("id-ID")}
+                            Rp {trx.amount.toLocaleString("id-ID")}
                           </td>
-                          <td className="py-3 px-4 text-muted-foreground">
-                            {trx.date ? new Date(trx.date).toLocaleString() : "-"}
+                          <td className="py-3 px-4 text-muted-foreground text-sm">
+                            {trx.date ? new Date(trx.date).toLocaleString("id-ID") : "-"}
                           </td>
                           <td className="py-3 px-4">
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => {
-                                // maintain same route structure as you had
-                                // if divisionId/projectId exist, keep them; otherwise navigate without
-                                const base = divisionId && projectId
-                                  ? `/divisions/${divisionId}/projects/${projectId}/transactions/${trx.id}`
-                                  : `/transactions/${trx.id}`;
-                                navigate(base);
-                              }}
+                              onClick={() => handleViewDetail(trx.id)}
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
@@ -248,45 +250,48 @@ const TransactionHistory = () => {
                 </table>
               </div>
 
-              {/* Pagination Controls */}
-              {filtered.length > 0 && (
-                <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
-                  <div className="text-sm text-muted-foreground">
-                    Menampilkan {(currentPage - 1) * itemsPerPage + 1} -{" "}
-                    {Math.min(currentPage * itemsPerPage, filtered.length)} dari {filtered.length} transaksi
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      Sebelumnya
-                    </Button>
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                        <Button
-                          key={page}
-                          variant={currentPage === page ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setCurrentPage(page)}
-                        >
-                          {page}
-                        </Button>
-                      ))}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Selanjutnya
-                    </Button>
-                  </div>
+              {/* --- Pagination Controls --- */}
+              <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
+                <div className="text-sm text-muted-foreground">
+                    {/* Logic menampilkan text: Showing 1-10 of 500 */}
+                    {totalItems > 0 ? (
+                        <>
+                        Menampilkan <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> -{" "}
+                        <span className="font-medium">{Math.min(currentPage * itemsPerPage, totalItems)}</span> dari{" "}
+                        <span className="font-medium">{totalItems}</span> data
+                        </>
+                    ) : (
+                        "0 Data"
+                    )}
                 </div>
-              )}
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1 || loading}
+                  >
+                    Sebelumnya
+                  </Button>
+                  
+                  {/* Page Indicator Simple */}
+                  <div className="flex items-center px-2">
+                     <span className="text-sm font-medium">
+                        Halaman {currentPage} / {totalPages || 1}
+                     </span>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages || loading}
+                  >
+                    Selanjutnya
+                  </Button>
+                </div>
+              </div>
             </>
           )}
         </div>
