@@ -16,6 +16,8 @@ import CreateDivision from "./pages/CreateDivision";
 import CreateProject from "./pages/CreateProject";
 import TaskList from "./pages/ListTransactions";
 import CreateTransaction from "./pages/CreateTransaction";
+import TransactionDetail from "./pages/TransactionDetail";
+import TransactionDetailAdmin from "./pages/TransactionDetailAdmin";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +42,12 @@ const App = () => (
             path="/divisions/:divisionId/projects/:projectId/tasks"
             element={<TaskList />}
           />
+          <Route path="/transactions/:id" element={<TransactionDetail />} />
+          <Route
+            path="/divisions/:divisionId/projects/:projectId/transactions/:transactionId"
+            element={<TransactionDetailAdmin />}
+          />
+
           <Route path="/divisions/:divisionId/projects/:projectId/transactions/create" element={<CreateTransaction />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

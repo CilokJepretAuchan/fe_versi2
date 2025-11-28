@@ -8,12 +8,12 @@ import { Search, Eye } from "lucide-react";
 
 interface Transaction {
   id: string;
-  title: string;
+  title: string; // fallback dari description
   type: string;
   amount: number;
-  date: string;
-  category: string;
-  verified: boolean;
+  date: string; // fallback dari transactionDate
+  category: string; // categoryName
+  verified: boolean; // fallback always true (tidak ada di backend)
 }
 
 const ListTransactions = () => {
@@ -27,56 +27,83 @@ const ListTransactions = () => {
   const token = localStorage.getItem("token");
   const orgId = localStorage.getItem("orgId");
 
-  // FETCH TRANSACTION DATA
+  // ================================
+  // FETCH TRANSACTIONS
+  // ================================
   const fetchTransactions = async () => {
-  if (!token || !orgId) {
-    console.error("Token atau orgId tidak ditemukan");
-    return;
-  }
-
-  try {
-    const params = new URLSearchParams({
-      orgId: orgId, // PARAM BENAR SESUAI API DOCS
-      page: "1",
-      limit: "20",
-    });
-
-    if (divisionId) params.append("divisionId", divisionId);
-    if (projectId) params.append("projectId", projectId);
-
-    const url = `https://backend-auchan-production.up.railway.app/api/transactions?${params.toString()}`;
-
-    console.log("REQUEST:", url);
-
-    const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const raw = await res.text();
-    console.log("RAW RESPONSE:", raw);
-
-    if (!res.ok) {
-      console.error("Fetch failed:", res.status, raw);
+    if (!token) {
+      console.error("Token tidak ditemukan");
       return;
     }
 
-    const json = JSON.parse(raw);
+    try {
+      const params = new URLSearchParams({
+        page: "1",
+        limit: "20",
+      });
 
-    setTransactions(json.data || []);
-  } catch (err) {
-    console.error("Fetch error:", err);
-  }
-};
+      if (divisionId) params.append("divisionId", divisionId);
+      if (projectId) params.append("projectId", projectId);
 
+      const url = `https://backend-auchan-production.up.railway.app/api/transactions?${params.toString()}`;
 
+      console.log("REQUEST:", url);
+
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const raw = await res.text();
+      console.log("RAW RESPONSE:", raw);
+
+      if (!res.ok) {
+        console.error("Fetch failed:", res.status, raw);
+        return;
+      }
+
+      const json = JSON.parse(raw);
+
+      // BACKEND FORMAT:
+      // {
+      //   success: true,
+      //   data: {
+      //     data: [... transactions ...],
+      //     meta: {...pagination}
+      //   }
+      // }
+
+      const trx = json?.data?.data || [];
+
+      // =============================
+      // MAP KE FORMAT FRONTEND KAMU
+      // =============================
+      const formatted = trx.map((t: any) => ({
+        id: t.id,
+        title: t.description || "-", // fallback
+        type: t.type || "unknown",
+        amount: t.amount || 0,
+        date: t.transactionDate
+          ? new Date(t.transactionDate).toLocaleDateString("id-ID")
+          : "-",
+        category: t.category?.categoryName || "Tidak ada kategori",
+        verified: true, // backend tidak punya, jadi default true
+      }));
+
+      setTransactions(formatted);
+    } catch (err) {
+      console.error("Fetch error:", err);
+    }
+  };
 
   useEffect(() => {
     fetchTransactions();
   }, [divisionId, projectId, orgId]);
 
-  // FILTER LOGIC
+  // ================================
+  // FILTER
+  // ================================
   const filteredTransactions = transactions.filter((trx) => {
     const matchSearch =
       trx.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -136,7 +163,7 @@ const ListTransactions = () => {
                   <th className="py-3 text-left">Tipe</th>
                   <th className="py-3 text-left">Jumlah</th>
                   <th className="py-3 text-left">Tanggal</th>
-                  <th className="py-3 text-left">Status Hash</th>
+                  <th className="py-3 text-left">Kategori</th>
                   <th className="py-3 text-left">Aksi</th>
                 </tr>
               </thead>
@@ -153,7 +180,9 @@ const ListTransactions = () => {
                     <td className="py-3">
                       <Badge
                         variant={
-                          trx.type === "pemasukan" ? "default" : "destructive"
+                          trx.type.toLowerCase() === "income"
+                            ? "default"
+                            : "destructive"
                         }
                         className="rounded-lg"
                       >
@@ -167,14 +196,7 @@ const ListTransactions = () => {
 
                     <td className="py-3 text-muted-foreground">{trx.date}</td>
 
-                    <td className="py-3">
-                      <Badge
-                        variant={trx.verified ? "default" : "secondary"}
-                        className="rounded-lg"
-                      >
-                        {trx.verified ? "Valid" : "Invalid"}
-                      </Badge>
-                    </td>
+                    <td className="py-3">{trx.category}</td>
 
                     <td className="py-3">
                       <Button
