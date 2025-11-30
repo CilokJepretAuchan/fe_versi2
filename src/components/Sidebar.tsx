@@ -22,7 +22,7 @@ const menuItems = [
   { icon: History, label: "Riwayat Transaksi", path: "/transaction-history", roles: ["ADMIN", "TREASURER", "AUDITOR", "MEMBER"] },
 
   // blockchain ledger bisa diakses semua, termasuk auditor
-  { icon: Blocks, label: "Blockchain Ledger", path: "/blockchain-ledger", roles: ["ADMIN", "TREASURER", "AUDITOR", "MEMBER"] },
+  // { icon: Blocks, label: "Blockchain Ledger", path: "/blockchain-ledger", roles: ["ADMIN", "TREASURER", "AUDITOR", "MEMBER"] },
 
   // laporan AI hanya ADMIN & AUDITOR
   { icon: FileBarChart, label: "Laporan AI", path: "/ai-reports", roles: ["ADMIN", "AUDITOR"] },

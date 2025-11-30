@@ -25,24 +25,47 @@ import { toast } from "sonner";
 // --- Types ---
 type JobStatus = "idle" | "processing" | "completed" | "failed";
 
+interface Category {
+  id: string;
+  categoryName: string;
+}
+
+interface FormState {
+  amount: string;
+  type: string;
+  categoryId: string;
+  description: string;
+}
+
+// --- Utility: Remove Duplicate Category ---
+const uniqueCategories = (arr: Category[]): Category[] => {
+  const map = new Map<string, Category>();
+  arr.forEach((item) => {
+    map.set(item.categoryName.trim().toLowerCase(), item);
+  });
+  return Array.from(map.values());
+};
+
 const CreateTransaction = () => {
   const navigate = useNavigate();
   const { projectId, divisionId } = useParams();
 
   // Auth Data
-  const token = localStorage.getItem("token");
-  const orgId = localStorage.getItem("orgId");
-  const userId = localStorage.getItem("userId");
+  const token = localStorage.getItem("token") || "";
+  const orgId = localStorage.getItem("orgId") || "";
+  const userId = localStorage.getItem("userId") || "";
 
   // Base URLs
   const BASE_URL_AI = "https://petanihandal-auchanagenticservices.hf.space";
   const BASE_URL_API = "https://backend-auchan-production.up.railway.app";
 
-  // State Mode & Form
+  // State UI
   const [activeTab, setActiveTab] = useState("manual"); // 'manual' | 'auto'
+  const [loading, setLoading] = useState(false);
 
-  // State Manual Form
-  const [form, setForm] = useState({
+  // --- STATE MANUAL ---
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [form, setForm] = useState<FormState>({
     amount: "",
     type: "",
     categoryId: "",
@@ -50,13 +73,56 @@ const CreateTransaction = () => {
   });
   const [manualFile, setManualFile] = useState<File | null>(null);
 
-  // State AI Job
+  // --- STATE AI ---
   const [aiFile, setAiFile] = useState<File | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<JobStatus>("idle");
-  const [loading, setLoading] = useState(false);
 
-  // --- 1. POLLING MECHANISM (Untuk AI Mode) ---
+  // Fallback Categories (Jika API Error)
+  const fallbackCategories: Category[] = [
+    { id: "073ff1ab-4139-4f6a-a15b-8128cf4e5468", categoryName: "General" },
+    { id: "0f6174c2-5b15-4e6c-b807-3438ba2fb3bc", categoryName: "Beverages" },
+    { id: "dabb7758-4719-4c94-897c-a00fd6a7f218", categoryName: "Other" },
+    { id: "ac0092ff-e019-4de0-9a03-c1af455f7001", categoryName: "Operational" },
+  ];
+
+  // ==================================================
+  // 1. FETCH CATEGORIES (Dari Kode Akhir - Biar Manualnya Dinamis)
+  // ==================================================
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch(
+          `${BASE_URL_API}/api/categories?orgId=${orgId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (!res.ok) throw new Error("Fetch failed");
+
+        const json = await res.json();
+
+        if (json.data && Array.isArray(json.data)) {
+          const cleaned = uniqueCategories(json.data);
+          setCategories(cleaned);
+        } else {
+          setCategories(fallbackCategories);
+        }
+      } catch (err) {
+        console.warn("Categories API error, using fallback:", err);
+        setCategories(fallbackCategories);
+      }
+    };
+
+    if (activeTab === "manual") {
+      fetchCategories();
+    }
+  }, [token, orgId, activeTab]);
+
+  // ==================================================
+  // 2. AI POLLING MECHANISM (Dari Kode Awal - Biar AI Smooth)
+  // ==================================================
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
@@ -69,7 +135,7 @@ const CreateTransaction = () => {
     return () => clearInterval(interval);
   }, [jobStatus, jobId]);
 
-  // --- 2. LOGIC: START JOB (AI UPLOAD) ---
+  // --- LOGIC: START JOB (AI UPLOAD) ---
   const startAIProcessing = async () => {
     if (!aiFile) {
       toast.error("Pilih dokumen terlebih dahulu");
@@ -81,7 +147,7 @@ const CreateTransaction = () => {
       const fd = new FormData();
       fd.append("file", aiFile);
 
-      // Kirim Context (Org, Project, User) agar AI tau kemana data harus disimpan
+      // Kirim Context
       const extractUrl = `${BASE_URL_AI}/api/extract/docx?userId=${userId}&orgId=${orgId}&projectId=${projectId}`;
 
       const res = await fetch(extractUrl, {
@@ -110,7 +176,7 @@ const CreateTransaction = () => {
     }
   };
 
-  // --- 3. LOGIC: CHECK STATUS ---
+  // --- LOGIC: CHECK AI STATUS ---
   const checkJobStatus = async () => {
     if (!jobId) return;
 
@@ -127,7 +193,7 @@ const CreateTransaction = () => {
         setLoading(false);
         toast.success("Transaksi berhasil disimpan otomatis!");
 
-        // Redirect setelah sukses (Delay sedikit agar user lihat centang hijau)
+        // Redirect setelah sukses
         setTimeout(() => {
           navigate(`/divisions/${divisionId}/projects/${projectId}/tasks`);
         }, 1500);
@@ -141,10 +207,12 @@ const CreateTransaction = () => {
     }
   };
 
-  // --- 4. LOGIC: MANUAL SUBMIT ---
+  // ==================================================
+  // 3. MANUAL SUBMIT (Gabungan Logic Kode Akhir + UI Kode Awal)
+  // ==================================================
   const submitManual = async () => {
-    if (!form.amount || !form.type) {
-      toast.error("Jumlah dan Tipe wajib diisi");
+    if (!form.amount || !form.type || !form.description) {
+      toast.error("Jumlah, Tipe, dan Deskripsi wajib diisi");
       return;
     }
 
@@ -156,9 +224,9 @@ const CreateTransaction = () => {
       fd.append("transactionDate", new Date().toISOString());
       fd.append("amount", form.amount);
       fd.append("type", form.type);
+      fd.append("description", form.description);
 
       if (form.categoryId) fd.append("categoryId", form.categoryId);
-      if (form.description) fd.append("description", form.description);
       if (manualFile) fd.append("attachments", manualFile);
 
       const res = await fetch(`${BASE_URL_API}/api/transactions`, {
@@ -195,12 +263,12 @@ const CreateTransaction = () => {
           </p>
         </div>
 
-        {/* Main Container: Centered & Responsive */}
+        {/* Main Container */}
         <div className="max-w-2xl mx-auto bg-gradient-card border border-border rounded-2xl shadow-sm overflow-hidden">
           <Tabs
             value={activeTab}
             onValueChange={(v) => {
-              if (!loading) setActiveTab(v); // Prevent switch tab saat loading
+              if (!loading) setActiveTab(v);
             }}
             className="w-full"
           >
@@ -266,18 +334,17 @@ const CreateTransaction = () => {
                         <SelectValue placeholder="Pilih Kategori" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1f6c2682-c2d2-4cfd-a71e-859d87513cf3">
-                          Raw Materials
-                        </SelectItem>
-                        <SelectItem value="3bfc9e0b-dd37-4114-8c8d-444d03b0b8ec">
-                          Supplies
-                        </SelectItem>
-                        <SelectItem value="7582c0ac-ea96-4ef2-b80d-abe38bb3898a">
-                          Food
-                        </SelectItem>
-                        <SelectItem value="7efcf861-51d0-450d-8a6a-f4d4885d74b3">
-                          Utilities
-                        </SelectItem>
+                        {categories.length > 0 ? (
+                          categories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              {cat.categoryName}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="loading" disabled>
+                            Memuat kategori...
+                          </SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -349,17 +416,9 @@ const CreateTransaction = () => {
                   <strong>otomatis menyimpan</strong> data ke database.
                 </p>
 
-                <p className="text-sm text-muted-foreground px-4">
-                  Semakin banyak dokumen yang diunggah, hasil ekstraksi akan
-                  semakin akurat.
-                </p>
-
                 <p className="text-xs text-muted-foreground px-6 mt-3 italic">
-                  <strong>Disclaimer:</strong> Struktur tabel yang{" "}
-                  <u>jelas dan tidak menggunakan merged cells</u> akan
-                  menghasilkan akurasi ekstraksi dan analisis yang jauh lebih
-                  baik. Hindari tabel yang bercampur atau format yang ambigu
-                  untuk hasil optimal.
+                  <strong>Disclaimer:</strong> Struktur tabel yang jelas akan
+                  menghasilkan akurasi yang lebih baik.
                 </p>
               </div>
 
@@ -429,9 +488,7 @@ const CreateTransaction = () => {
                           AI Sedang Bekerja...
                         </h3>
                         <p className="text-sm text-muted-foreground mt-1">
-                          Menganalisis dokumen dan menyimpan ke database.
-                          <br />
-                          Mohon jangan tutup halaman ini.
+                          Menganalisis dokumen dan menyimpan ke database...
                         </p>
                       </div>
                     </>
@@ -448,8 +505,6 @@ const CreateTransaction = () => {
                           Berhasil Disimpan!
                         </h3>
                         <p className="text-sm text-muted-foreground mt-1">
-                          Transaksi telah masuk ke database.
-                          <br />
                           Mengalihkan ke halaman list...
                         </p>
                       </div>

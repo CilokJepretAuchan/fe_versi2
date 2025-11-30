@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import Sidebar from "@/components/Sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, FileText, Hash, Paperclip } from "lucide-react";
+import { Loader2, FileText, Paperclip, AlertTriangle } from "lucide-react";
 
 interface TransactionDetail {
   id: string;
@@ -16,7 +16,7 @@ interface TransactionDetail {
   description: string;
   transactionDate: string;
   status: string;
-  aiAnomalyScore: number | null;
+  aiAnomalyScore: number | null; // Field lama di root (bisa diabaikan jika pakai anomalyReport)
   blockchainHash: string | null;
   blockchainTxId: string | null;
   createdAt: string;
@@ -34,6 +34,19 @@ interface TransactionDetail {
       name: string;
     };
   };
+  // Sesuaikan dengan JSON baru
+  anomalyReport: {
+    id: string;
+    transactionId: string;
+    aiScore: number;
+    reason: string;
+    status: string;
+    auditorId: string | null;
+    auditorNotes: string | null;
+    createdAt: string;
+    updatedAt: string | null;
+  } | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   attachments: any[];
 }
 
@@ -64,11 +77,10 @@ export default function TransactionDetailPage() {
     };
 
     fetchDetail();
-  }, [id]);
+  }, [id, token]);
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Sidebar tidak ikut loading */}
       <Sidebar />
 
       <main className="flex-1 p-8">
@@ -89,16 +101,15 @@ export default function TransactionDetailPage() {
             <div className="h-10 bg-muted animate-pulse rounded-xl" />
             <div className="h-40 bg-muted animate-pulse rounded-xl" />
             <div className="h-40 bg-muted animate-pulse rounded-xl" />
-            <div className="h-40 bg-muted animate-pulse rounded-xl" />
           </div>
         )}
 
         {/* DATA */}
         {!loading && trx && (
           <div className="space-y-8">
-
+            
             {/* SECTION: INFO UTAMA */}
-            <Card className="shadow-lg border-primary/20">
+            <Card className="shadow-sm border-primary/20">
               <CardHeader>
                 <CardTitle className="text-xl font-semibold">
                   Informasi Transaksi
@@ -114,38 +125,34 @@ export default function TransactionDetailPage() {
                     </span>
                   </p>
                   <p><strong>Type:</strong> {trx.type}</p>
-                  <p><strong>Status:</strong> {trx.status}</p>
                   <p>
                     <strong>Tanggal:</strong>{" "}
-                    {new Date(trx.transactionDate).toLocaleString()}
+                    {new Date(trx.transactionDate).toLocaleString("id-ID")}
                   </p>
+                  <div className="mt-4">
+                    <strong>Status Transaksi:</strong>
+                    <Badge variant="outline" className="ml-2 capitalize">
+                      {trx.status}
+                    </Badge>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <p className="font-semibold">AI Anomaly Score:</p>
-                  {trx.aiAnomalyScore === null ? (
-                    <Badge variant="outline">N/A</Badge>
-                  ) : (
-                    <Badge
-                      variant={trx.aiAnomalyScore >= 0.7 ? "destructive" : "default"}
-                      className="rounded-lg text-sm px-3 py-1"
-                    >
-                      {(trx.aiAnomalyScore * 100).toFixed(1)}%
-                    </Badge>
-                  )}
-
+                  <p><strong>User:</strong> {trx.user.name}</p>
+                  <p><strong>Email:</strong> {trx.user.email}</p>
+                  
                   <div className="mt-4">
                     <strong>Description</strong>
-                    <div className="bg-muted p-3 rounded-md mt-1">
-                      {trx.description || "Tidak ada deskripsi"}
+                    <div className="bg-muted p-3 rounded-md mt-1 italic text-sm">
+                      "{trx.description || "Tidak ada deskripsi"}"
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* SECTION: PROJECT */}
-            <Card className="shadow-lg">
+             {/* SECTION: PROJECT */}
+             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle>Project & Category</CardTitle>
               </CardHeader>
@@ -166,20 +173,67 @@ export default function TransactionDetailPage() {
               </CardContent>
             </Card>
 
-            {/* SECTION: BLOCKCHAIN */}
-            {/* <Card className="shadow-lg">
-              <CardHeader className="flex items-center gap-2">
-                <Hash className="w-5 h-5 text-primary" />
-                <CardTitle>Blockchain Record</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p><strong>Hash:</strong> {trx.blockchainHash || "-"}</p>
-                <p><strong>Transaction ID:</strong> {trx.blockchainTxId || "-"}</p>
-              </CardContent>
-            </Card> */}
+            {/* --- SECTION BARU: ANOMALY REPORT --- */}
+            {trx.anomalyReport && (
+              <Card className="shadow-sm border-destructive/50 bg-destructive/5">
+                <CardHeader className="flex flex-row items-center gap-2 pb-2">
+                  <AlertTriangle className="w-5 h-5 text-destructive" />
+                  <CardTitle className="text-destructive text-lg">
+                    AI Anomaly Detection
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Score & Status Row */}
+                  <div className="flex flex-wrap items-center gap-4">
+                     <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm">Anomaly Score:</span>
+                        <Badge 
+                          variant={trx.anomalyReport.aiScore > 0.5 ? "destructive" : "secondary"}
+                          className="text-sm px-3"
+                        >
+                          {(trx.anomalyReport.aiScore * 100).toFixed(1)}%
+                        </Badge>
+                     </div>
+                     <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm">Audit Status:</span>
+                        <Badge variant="outline" className="capitalize bg-background">
+                          {trx.anomalyReport.status}
+                        </Badge>
+                     </div>
+                  </div>
+
+                  {/* Reason Box */}
+                  <div className="bg-background border border-destructive/20 p-4 rounded-md">
+                    <p className="text-sm font-semibold text-muted-foreground mb-1">
+                      Alasan Deteksi AI:
+                    </p>
+                    <p className="text-foreground font-medium">
+                      {trx.anomalyReport.reason}
+                    </p>
+                  </div>
+
+                  {/* Auditor Notes (Jika ada) */}
+                  {trx.anomalyReport.auditorNotes && (
+                    <div className="bg-background border p-4 rounded-md">
+                      <p className="text-sm font-semibold text-muted-foreground mb-1">
+                        Catatan Auditor:
+                      </p>
+                      <p>{trx.anomalyReport.auditorNotes}</p>
+                    </div>
+                  )}
+                  
+                  {/* Jika belum ada notes */}
+                  {!trx.anomalyReport.auditorNotes && (
+                     <p className="text-xs text-muted-foreground">
+                       * Belum ada catatan review dari auditor internal.
+                     </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* SECTION: ATTACHMENTS */}
-            <Card className="shadow-lg">
+            <Card className="shadow-sm">
               <CardHeader className="flex items-center gap-2">
                 <Paperclip className="w-5 h-5 text-primary" />
                 <CardTitle>Attachments</CardTitle>
